@@ -12,13 +12,31 @@ using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
 //Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
+channnel.ExchangeDeclare(
+    exchange: "header-exchange-example",
+    type: ExchangeType.Headers
+    );
 
+Console.Write("Header value giriniz :");
+string value = Console.ReadLine();
+
+string queuName = channnel.QueueDeclare().QueueName;
+
+
+channnel.QueueBind(
+    queue: queuName,
+    exchange: "header-exchange-example",
+    routingKey: string.Empty,
+    new Dictionary<string, object>
+    {
+        ["x-match"]="all", // valuesu anydir
+        ["no"] = value
+    });
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
 // autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
 
-channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-channnel.BasicQos(0, 1, false);
+channnel.BasicConsume(queue: queuName, autoAck: true, consumer: consumer);
+
 consumer.Received += Consumer_Received;
 
 void Consumer_Received(object? sender, BasicDeliverEventArgs e)
@@ -27,6 +45,5 @@ void Consumer_Received(object? sender, BasicDeliverEventArgs e)
     //e.Body:quue message data
     Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
     //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
-    channnel.BasicAck(e.DeliveryTag, multiple: false);
 }
 Console.Read();
