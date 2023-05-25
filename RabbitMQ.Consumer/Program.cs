@@ -12,12 +12,13 @@ using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
 //Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false);
+channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
 
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
+// autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
 
 channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-
+channnel.BasicQos(0, 1, false);
 consumer.Received += Consumer_Received;
 
 void Consumer_Received(object? sender, BasicDeliverEventArgs e)
@@ -25,5 +26,7 @@ void Consumer_Received(object? sender, BasicDeliverEventArgs e)
     //response message operation
     //e.Body:quue message data
     Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
+    //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
+    channnel.BasicAck(e.DeliveryTag, multiple: false);
 }
 Console.Read();
