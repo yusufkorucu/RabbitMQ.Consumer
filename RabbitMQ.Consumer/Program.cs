@@ -11,22 +11,34 @@ connectionFactory.Uri = new Uri("amqps://utmrfjnx:5EAFe_eJPnPfK04-bk1qfDp6YVP51M
 using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
-//Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
+channnel.ExchangeDeclare(exchange: "fanout-excahnge-example", type: ExchangeType.Fanout);
+
+Console.Write("Kuyruk adı gir");
+string queeName = Console.ReadLine();
+
+channnel.QueueDeclare(
+    queue: queeName,
+    exclusive: false
+    );
+
+channnel.QueueBind(
+
+    queue: queeName,
+    exchange: "fanout-excahnge-example",
+    routingKey:string.Empty
+    );
 
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
-// autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
 
-channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-channnel.BasicQos(0, 1, false);
-consumer.Received += Consumer_Received;
+channnel.BasicConsume
+    (queue:queeName,
+    autoAck:true,
+    consumer:consumer);
 
-void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+consumer.Received += (sernder, e) =>
 {
-    //response message operation
-    //e.Body:quue message data
-    Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
-    //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
-    channnel.BasicAck(e.DeliveryTag, multiple: false);
-}
+    string message = Encoding.UTF8.GetString(e.Body.Span);
+    Console.WriteLine(message);
+};
+
 Console.Read();
