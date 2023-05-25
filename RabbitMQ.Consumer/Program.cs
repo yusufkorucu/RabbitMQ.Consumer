@@ -6,27 +6,29 @@ using System.Text;
 ConnectionFactory connectionFactory = new ConnectionFactory();
 connectionFactory.Uri = new Uri("amqps://utmrfjnx:5EAFe_eJPnPfK04-bk1qfDp6YVP51MbT@chimpanzee.rmq.cloudamqp.com/utmrfjnx");
 
-//Connection active Channeş Open
+//Connection active
 
 using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
-//Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
+channnel.ExchangeDeclare(exchange: "direct-exchange-example", type: ExchangeType.Direct);
+
+
+string queeName = channnel.QueueDeclare().QueueName;
+
+channnel.QueueBind(queue: queeName
+    , exchange: "direct-exchange-example"
+    , routingKey: "direct-quee-example");
 
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
-// autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
+channnel.BasicConsume(queeName, true, consumer);
 
-channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-channnel.BasicQos(0, 1, false);
 consumer.Received += Consumer_Received;
 
 void Consumer_Received(object? sender, BasicDeliverEventArgs e)
 {
-    //response message operation
-    //e.Body:quue message data
-    Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
-    //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
-    channnel.BasicAck(e.DeliveryTag, multiple: false);
+    string messeage = Encoding.UTF8.GetString(e.Body.Span);
+    Console.WriteLine(messeage);
 }
+
 Console.Read();
