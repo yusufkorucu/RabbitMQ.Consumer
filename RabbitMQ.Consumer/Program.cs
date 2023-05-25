@@ -11,14 +11,24 @@ connectionFactory.Uri = new Uri("amqps://utmrfjnx:5EAFe_eJPnPfK04-bk1qfDp6YVP51M
 using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
-//Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
+channnel.ExchangeDeclare(
+    exchange: "topic-exchange-example",
+    type: ExchangeType.Topic
+    );
+
+
+Console.Write("Dinlenecek topic formatınız belirtiniz");
+string topic = Console.ReadLine();
+var queuName = channnel.QueueDeclare().QueueName;
+
+channnel.QueueBind(queue: queuName,
+    exchange: "topic-exchange-example",
+    routingKey: topic);
 
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
 // autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
 
-channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-channnel.BasicQos(0, 1, false);
+channnel.BasicConsume(queue: queuName, autoAck: true, consumer: consumer);
 consumer.Received += Consumer_Received;
 
 void Consumer_Received(object? sender, BasicDeliverEventArgs e)
@@ -27,6 +37,5 @@ void Consumer_Received(object? sender, BasicDeliverEventArgs e)
     //e.Body:quue message data
     Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
     //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
-    channnel.BasicAck(e.DeliveryTag, multiple: false);
 }
 Console.Read();
