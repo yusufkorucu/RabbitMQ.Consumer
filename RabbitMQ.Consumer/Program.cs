@@ -11,22 +11,133 @@ connectionFactory.Uri = new Uri("amqps://utmrfjnx:5EAFe_eJPnPfK04-bk1qfDp6YVP51M
 using IConnection connection = connectionFactory.CreateConnection();
 using IModel channnel = connection.CreateModel();
 
-//Quee oluşurma
-channnel.QueueDeclare(queue: "korucu-test-quee", exclusive: false,durable:true);
+#region P2P (Point to Point)
+
+//string queueName = "example-p2p-queue";
+
+//channnel.QueueDeclare(
+//    queue: queueName,
+//    durable: false,
+//    exclusive: false,
+//    autoDelete: false);
+
+
+//EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
+//channnel.BasicConsume(queue: queueName,
+//   autoAck: false,
+//   consumer: consumer);
+
+//consumer.Received += Consumer_Received;
+
+//void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+//{
+//   Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
+//}
+
+#endregion
+
+#region Publish/Subscribe (pub/sub)
+
+//string exchangeName = "example-pub-sub-exchange";
+//channnel.ExchangeDeclare(
+//    exchange: exchangeName,
+//    type: ExchangeType.Fanout);
+
+//string queueName = channnel.QueueDeclare().QueueName;
+
+
+//channnel.QueueBind(
+//    queue: queueName,
+//    exchange: exchangeName,
+//    routingKey: string.Empty);
+
+////channnel.BasicQos(prefetchCount: 1,
+////    prefetchSize: 0,
+////    global: false);
+
+
+//EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
+//channnel.BasicConsume(queue: queueName,
+//    autoAck: false, consumer);
+//consumer.Received += Consumer_Received;
+
+//void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+//{
+//    Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
+//}
+
+#endregion
+
+#region Work Quee(İş kuyruğu)
+//string queueName = "example-work-queue";
+
+//channnel.QueueDeclare(
+//    queue: queueName,
+//    durable: false,
+//    exclusive: false,
+//    autoDelete: false
+//    );
+
+
+//EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
+//channnel.BasicConsume(
+//    queue: queueName,
+//    autoAck: true,
+//    consumer: consumer
+//    );
+
+//channnel.BasicQos(
+//    prefetchCount: 1,
+//    prefetchSize: 0,
+//    global: false
+//    );
+
+//consumer.Received += Consumer_Received;
+
+//void Consumer_Received(object? sender, BasicDeliverEventArgs e)
+//{
+//    Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
+//}
+
+#endregion
+
+#region Request Response 
+
+string requestQueueName = "example-request-response-queue";
+
+channnel.QueueDeclare(queue: requestQueueName,
+    durable: false,
+    exclusive: false,
+    autoDelete: false);
 
 EventingBasicConsumer consumer = new EventingBasicConsumer(channnel);
-// autoack true value kuyruktan siler false ise consumerdan onay bekelenecektir
 
-channnel.BasicConsume(queue: "korucu-test-quee", autoAck: false, consumer: consumer);
-channnel.BasicQos(0, 1, false);
+channnel.BasicConsume(queue: requestQueueName,
+    autoAck: true,
+    consumer: consumer);
+
 consumer.Received += Consumer_Received;
 
 void Consumer_Received(object? sender, BasicDeliverEventArgs e)
 {
-    //response message operation
-    //e.Body:quue message data
-    Console.WriteLine(Encoding.UTF8.GetString(e.Body.Span));
-    //e.tag uniqe multiple true denirse oncekileride başarılı der false olursa sadece o mesaj
-    channnel.BasicAck(e.DeliveryTag, multiple: false);
+    string message = Encoding.UTF8.GetString(e.Body.Span);
+    Console.WriteLine(message);
+
+    byte[] responseMessage = Encoding.UTF8.GetBytes($"İşlem Tamamlandı {message}");
+
+    IBasicProperties properties = channnel.CreateBasicProperties();
+
+    properties.CorrelationId = e.BasicProperties.CorrelationId;
+
+    channnel.BasicPublish(
+        exchange: string.Empty,
+        routingKey: e.BasicProperties.ReplyTo,
+        basicProperties: properties,
+        body: responseMessage
+        );
+
 }
+
+#endregion
+
 Console.Read();
